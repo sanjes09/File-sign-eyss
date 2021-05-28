@@ -6,7 +6,9 @@
   "scripts": {
     "start": "hardhat node",
     "test": "hardhat test",
+    "precompile": "rm -r $(pwd)/client/src/utils/abi && mkdir $(pwd)/client/src/utils/abi",
     "compile": "hardhat compile",
+    "postcompile": "mv $(pwd)/artifacts/contracts/*/*.json $(pwd)/client/src/utils/abi",
     "deploy": "hardhat run scripts/deploy.js",
     "deploy-Main": "hardhat run scripts/deploy.js --network mainnet",
     "deploy-Rinkeby": "hardhat run scripts/deploy.js --network rinkeby",

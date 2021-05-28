@@ -8,9 +8,8 @@ import Web3Modal from "web3modal";
 import WalletConnectProvider from "@walletconnect/web3-provider";
 import Torus from "@toruslabs/torus-embed";
 import Authereum from "authereum";
-import { OpenSeaPort, Network } from 'opensea-js'
 
-import NFT1155 from '../utils/abi/NFT1155.json';
+import Signer from '../utils/abi/Signer.json';
 import {CONTRACT_ADDRESS, CURRENT_NETWORK} from './constants';
 
 let web3 = null;
@@ -22,7 +21,6 @@ const initialState = {
   contracts: {},
   networkId: null,
   chainId: null,
-  seaport: null,
 };
 
 export const Web3Context = createContext(initialState);
@@ -51,13 +49,6 @@ export const Web3Provider = ({ children }) => {
     });
   };
 
-  const setSeaport = (seaport) => {
-    dispatch({
-      type: "SET_SEAPORT",
-      payload: seaport,
-    });
-  };
-
   const logout = () => {
     setAccount(null);
     localStorage.setItem("defaultWallet", null);
@@ -67,15 +58,12 @@ export const Web3Provider = ({ children }) => {
     // Web3 Modal
     let host;
     let network;
-    let networkName;
     if(CURRENT_NETWORK === 'Rinkeby'){
       host = "https://rinkeby.infura.io/v3/203d5c0b362148819014f26057fb0d90";
       network = "rinkeby";
-      networkName = Network.Rinkeby;
     }else{
       host = "https://mainnet.infura.io/v3/203d5c0b362148819014f26057fb0d90";
       network = "mainnet";
-      networkName = Network.Main;
     }
 
     const providerOptions = {
@@ -114,16 +102,12 @@ export const Web3Provider = ({ children }) => {
       web3 = new Web3(provider);
       window.web3 = web3;
 
-      const nft1155 = new web3.eth.Contract(NFT1155.abi, CONTRACT_ADDRESS);
-      setContracts({...state.contracts, nft1155});
-      window.nft1155 = nft1155;
+      const signer = new web3.eth.Contract(Signer.abi, CONTRACT_ADDRESS);
+      setContracts({...state.contracts, signer});
+      window.signer = signer;
 
       const networkId = await web3.givenProvider.networkVersion;
       setNetworkId(networkId);
-      const seaport = new OpenSeaPort(window.ethereum, {
-        networkName
-      })
-      setSeaport(seaport);
       
       const acc = await web3.eth.getAccounts();
       setAccount(acc[0]);
@@ -139,13 +123,10 @@ export const Web3Provider = ({ children }) => {
   const connectWeb3Lite = useCallback(async () => {
     // Web3 Modal
     let host;
-    let networkName;
     if(CURRENT_NETWORK === 'Rinkeby'){
       host = "https://rinkeby.infura.io/v3/203d5c0b362148819014f26057fb0d90";
-      networkName = Network.Rinkeby;
     }else{
       host = "https://mainnet.infura.io/v3/203d5c0b362148819014f26057fb0d90";
-      networkName = Network.Main;
     }
 
     try {
@@ -153,16 +134,11 @@ export const Web3Provider = ({ children }) => {
       web3 = new Web3(host);
       window.web3 = web3;
 
-      const nft1155 = new web3.eth.Contract(NFT1155.abi, CONTRACT_ADDRESS);
-      setContracts({...state.contracts, nft1155});
-      window.nft1155 = nft1155;
+      const signer = new web3.eth.Contract(Signer.abi, CONTRACT_ADDRESS);
+      setContracts({...state.contracts, signer});
+      window.signer = signer;
       const networkId = await web3.givenProvider.networkVersion;
       setNetworkId(networkId);
-
-      const seaport = new OpenSeaPort(window.ethereum, {
-        networkName
-      })
-      setSeaport(seaport);
 
     } catch (error) {
       console.log(error);
@@ -171,42 +147,67 @@ export const Web3Provider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const mintToken = async (tokenAmount, schemaHash) => {
+  const isOwner = async () => {
     if(state.account){
-      const tx = await state.contracts.nft1155.methods.mintNew(tokenAmount, schemaHash).send({from: state.account});
-      return tx.events.newNFT.returnValues.id
+      return await state.contracts.signer.methods.owner().call();
     }
   }
 
-  const newOwner = async (address) => {
+  const getInformation = async (hash) => {
     if(state.account){
-      await state.contracts.nft1155.methods.grantRole("0x00", address).send({from: state.account});
-    }
+      return await state.contracts.signer.methods.getInformation(hash).call();
+    } 
   }
 
-  const removeOwner = async (address) => {
+  const uploadFile = async (promotion, fileHash, validFrom, validTo) => {
     if(state.account){
-      await state.contracts.nft1155.methods.revokeRole("0x00", address).send({from: state.account});
-    }
+      return await state.contracts.signer.methods.uploadFile(promotion, fileHash, validFrom, validTo).send();
+    } 
   }
 
-  const isOwner = async() => {
+  const requestVerification = async (companyName) => {
     if(state.account){
-      return await state.contracts.nft1155.methods.hasRole("0x00",state.account).call();
-      // let x = await state.contracts.nft1155.methods.owner().call();
-      // return x === state.account;
-    }
+      await state.contracts.signer.methods.requestVerification(companyName).send();
+    } 
   }
 
-  const itemOwner = async (id) => {
-    if(state.account){
-      let x =  await state.contracts.nft1155.methods.balanceOf(state.account, id).call();
-      return x > 0;
-    }
+  const doVerification = async (address) => {
+    if(await isOwner() && state.account){
+      await state.contracts.signer.methods.verify(address).send();
+    } 
   }
 
-  const transferItem = async (toAddress, id, amount) => {
-    await state.contracts.nft1155.methods.safeTransferFrom(state.account, toAddress, id, amount, "0x").send({from: state.account});
+  const undoVerification = async (address) => {
+    if(await isOwner() && state.account){
+      await state.contracts.signer.methods.unverify(address).send();
+    } 
+  }
+
+  const getAllFiles = async () => {
+    let allFiles = [];
+    let allEvents = await contracts.signer.getPastEvents('createFile', {fromBlock: DEPLOY_BLOCK, toBlock: 'latest'})
+    for (const event of allEvents) {
+      let file = event.returnValues;
+      if(file.validTo * 1000 >= Date.now()){
+        
+        if(CURRENT_NETWORK === 'BSC_Testnet'){
+          file.blockInfo = "https://testnet.bscscan.com/tx/"+event.transactionHash;
+        }
+        if(CURRENT_NETWORK === 'BSC'){
+          file.blockInfo = "https://bscscan.com/tx/"+event.transactionHash;
+        }
+        if(CURRENT_NETWORK === 'Rinkeby'){
+          file.blockInfo = "https://rinkeby.etherscan.io//tx/"+event.transactionHash;
+        }
+        if(CURRENT_NETWORK === 'Mainnet'){
+          file.blockInfo = "https://etherscan.io//tx/"+event.transactionHash;
+        }
+
+        file.ipfsFile = "https://ipfs.io/ipfs/"+file.fileHash;
+        allFiles.push(file);
+      }
+    }
+    return allFiles;
   }
 
   useEffect(() => {
@@ -225,12 +226,13 @@ export const Web3Provider = ({ children }) => {
         web3,
         connectWeb3,
         logout,
-        mintToken,
         isOwner,
-        newOwner,
-        removeOwner,
-        itemOwner,
-        transferItem
+        getInformation,
+        uploadFile,
+        requestVerification,
+        doVerification,
+        undoVerification,
+        getAllFiles
       }}
     >
       {children}

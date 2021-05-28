@@ -20,11 +20,6 @@ export const Web3Reducer = (state, action) => {
         ...state,
         account: action.payload,
       };
-    case "SET_SEAPORT":
-      return {
-        ...state,
-        seaport: action.payload,
-      };
     case "CLEAR_STATE":
       return action.payload;
     default:
