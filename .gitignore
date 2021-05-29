@@ -5,3 +5,5 @@ bin
 bin/contracs
 .openzeppelin
 .env
+package-lock.json
+yarn.lock
