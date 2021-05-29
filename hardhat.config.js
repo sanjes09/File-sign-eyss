@@ -73,8 +73,8 @@ module.exports = {
     timeout: 240000,
   },
   gasReporter: {
-    enabled: false,
-    coinmarketcap: "556f708d-d5c0-4956-abb1-e2665c24405e",
+    // use the environmental variable REPORT_GAS to enable the hardhat gasReporter on the tests
+    enabled: (process.env.REPORT_GAS === "true") ? true : false,
     currency: 'USD',
     gasPrice: 172
   }
