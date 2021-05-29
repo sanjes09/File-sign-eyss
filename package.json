@@ -15,11 +15,7 @@
     "deploy-Matic": "hardhat run scripts/deploy.js --network matic",
     "deploy-MaticTest": "hardhat run scripts/deploy.js --network maticTest",
     "deploy-Binance": "hardhat run scripts/deploy.js --network binance",
-    "deploy-BinanceTest": "hardhat run scripts/deploy.js --network binanceTest",
-    "start-app": "react-scripts start",
-    "build-app": "react-scripts build",
-    "test-app": "react-scripts test",
-    "eject-app": "react-scripts eject"
+    "deploy-BinanceTest": "hardhat run scripts/deploy.js --network binanceTest"
   },
   "keywords": [],
   "author": "",
@@ -43,37 +39,8 @@
     "@openzeppelin/contracts-upgradeable": "^4.1.0",
     "@openzeppelin/truffle-upgrades": "^1.7.0",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
-    "@walletconnect/web3-provider": "^1.3.3",
     "chai": "^4.3.4",
     "dotenv": "^9.0.2",
-    "ipfs-http-client": "^50.0.0",
-    "react": "^17.0.1",
-    "react-bootstrap": "^1.4.3",
-    "react-dom": "^17.0.1",
-    "react-dropzone": "^11.3.2",
-    "react-router-dom": "^5.2.0",
-    "react-scripts": "4.0.1",
-    "sweetalert2": "^11.0.8",
-    "authereum": "^0.1.0",
-    "web3modal": "^1.9.2",
-    "web-vitals": "^0.2.4"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
-  },
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
+    "ipfs-http-client": "^50.0.0"
   }
 }
