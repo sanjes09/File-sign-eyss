@@ -31,14 +31,44 @@ contract Signer is Ownable{
   }
   mapping(address => Verified) public verified;
   mapping(string => File) public uploads;
+  
+  /**
+    @param _name name for the owner
+  */
+  constructor(string memory _name){
+    Verified memory newVerified = Verified({
+      owner: msg.sender,
+      name: _name,
+      valid: true,
+      requested: true
+    });
+    verified[msg.sender] = newVerified;
+  }
 
-  function getInformation(string memory hash) public view returns (address, string memory, string memory, uint256, uint256, uint256, bool) {
-    File memory temp = uploads[hash];
+  /**
+    @notice Get information from a hash file
+    @param _newOwner new owner address
+  */
+  function transferOwner(address _newOwner) public {
+    verified[msg.sender].owner = _newOwner;
+    transferOwnership(_newOwner);
+  }
+
+  /**
+    @notice Get information from a hash file
+    @param _hash hash to get information
+  */
+  function getInformation(string memory _hash) public view returns (address, string memory, string memory, uint256, uint256, uint256, bool) {
+    File memory temp = uploads[_hash];
     require(temp.valid, "File not found");
 
     return (temp.owner, temp.promotion, temp.fileHash, temp.validFrom, temp.validTo, temp.timestamp, temp.valid);
   }
 
+  /**
+    @notice Get information from a verified user
+    @param _owner address to get information
+  */
   function getOwnerInformation(address _owner) public view returns (address, string memory, bool, bool) {
     Verified memory temp = verified[_owner];
 
@@ -78,8 +108,8 @@ contract Signer is Ownable{
     Verified memory newVerified = Verified({
       owner: msg.sender,
       name: _name,
-      requested: true,
-      valid: false
+      valid: false,
+      requested: true
     });
     verified[msg.sender] = newVerified;
 

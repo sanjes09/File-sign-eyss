@@ -10,7 +10,7 @@ import Torus from "@toruslabs/torus-embed";
 import Authereum from "authereum";
 
 import Signer from '../utils/abi/Signer.json';
-import {CONTRACT_ADDRESS, CURRENT_NETWORK} from './constants';
+import {CONTRACT_ADDRESS, CURRENT_NETWORK, DEPLOY_BLOCK} from './constants';
 
 let web3 = null;
 
@@ -149,65 +149,140 @@ export const Web3Provider = ({ children }) => {
 
   const isOwner = async () => {
     if(state.account){
-      return await state.contracts.signer.methods.owner().call();
+      return await state.contracts.signer.methods.owner().call() === state.account;
     }
   }
 
   const getInformation = async (hash) => {
     if(state.account){
-      return await state.contracts.signer.methods.getInformation(hash).call();
+      let allEvents = await state.contracts.signer.getPastEvents('createFile', {fromBlock: DEPLOY_BLOCK, toBlock: 'latest'})
+      for (const event of allEvents) {
+        let file = event.returnValues;
+        if(file.fileHash === hash){
+          let resp = await state.contracts.signer.methods.getInformation(hash).call();
+          let owner = await state.contracts.signer.methods.getOwnerInformation(resp["0"]).call()
+          let data = {}
+
+          if(CURRENT_NETWORK === 'BSC_Testnet'){
+            data.blockInfo = "https://testnet.bscscan.com/tx/"+event.transactionHash;
+          }
+          if(CURRENT_NETWORK === 'BSC'){
+            data.blockInfo = "https://bscscan.com/tx/"+event.transactionHash;
+          }
+          if(CURRENT_NETWORK === 'Rinkeby'){
+            data.blockInfo = "https://rinkeby.etherscan.io/tx/"+event.transactionHash;
+          }
+          if(CURRENT_NETWORK === 'Mainnet'){
+            data.blockInfo = "https://etherscan.io/tx/"+event.transactionHash;
+          }
+          
+          data.validFrom = resp["3"];
+          data.timestamp = resp["5"];
+          data.owner = owner["1"];
+          data.ownerAddress = owner["0"];
+          data.name = resp["1"];
+          data.ipfsFile = "https://ipfs.io/ipfs/"+hash;
+          return data;
+        }
+      }
+    } 
+  }
+
+  const verifiedUser = async () => {
+    if(state.account){
+      let x = await state.contracts.signer.methods.getOwnerInformation(state.account).call();
+      return x[2];
     } 
   }
 
   const uploadFile = async (promotion, fileHash, validFrom, validTo) => {
     if(state.account){
-      return await state.contracts.signer.methods.uploadFile(promotion, fileHash, validFrom, validTo).send();
+      return await state.contracts.signer.methods.uploadFile(promotion, fileHash, validFrom, validTo).send({from: state.account});
     } 
   }
 
   const requestVerification = async (companyName) => {
     if(state.account){
-      await state.contracts.signer.methods.requestVerification(companyName).send();
+      return await state.contracts.signer.methods.requestVerification(companyName).send({from: state.account});
     } 
   }
 
-  const doVerification = async (address) => {
+  const getVerifications = async () => {
     if(await isOwner() && state.account){
-      await state.contracts.signer.methods.verify(address).send();
+      let allRequest = []
+      let allEvents = await state.contracts.signer.getPastEvents('userVerificationRequest', {fromBlock: DEPLOY_BLOCK, toBlock: 'latest'})
+      for (const element of allEvents) {
+        let event = element.returnValues
+        let resp = await state.contracts.signer.methods.getOwnerInformation(event.owner).call();
+        let data = {
+          name:resp["1"],
+          valid:resp["2"],
+          account:resp["0"],
+          timestamp:event.timestamp
+        }
+        allRequest.push(data)
+      }
+      return allRequest;
     } 
   }
 
-  const undoVerification = async (address) => {
+  const verificate = async (address) => {
+    console.log("llega")
+    console.log(`address`, address)
     if(await isOwner() && state.account){
-      await state.contracts.signer.methods.unverify(address).send();
+      const tx = await state.contracts.signer.methods.verify(address).send({from: state.account});
+      console.log(`tx`, tx)
+      return tx;
+    } 
+  }
+
+  const unverificate = async (address) => {
+    if(await isOwner() && state.account){
+      const tx = await state.contracts.signer.methods.unverify(address).send({from: state.account});
+      console.log(`tx`, tx)
+      return tx;
     } 
   }
 
   const getAllFiles = async () => {
-    let allFiles = [];
-    let allEvents = await contracts.signer.getPastEvents('createFile', {fromBlock: DEPLOY_BLOCK, toBlock: 'latest'})
-    for (const event of allEvents) {
-      let file = event.returnValues;
-      if(file.validTo * 1000 >= Date.now()){
-        
-        if(CURRENT_NETWORK === 'BSC_Testnet'){
-          file.blockInfo = "https://testnet.bscscan.com/tx/"+event.transactionHash;
+    if(state.contracts.signer && state.account){
+      let allFiles = [];
+      let allEvents = await state.contracts.signer.getPastEvents('createFile', {fromBlock: DEPLOY_BLOCK, toBlock: 'latest'})
+      for (const event of allEvents) {
+        let file = event.returnValues;
+        if(file.validTo * 1000 >= Date.now()){
+          let resp = await getInformation(file.fileHash)
+          let owner = await state.contracts.signer.methods.getOwnerInformation(resp.ownerAddress).call()
+          if(CURRENT_NETWORK === 'BSC_Testnet'){
+            file.blockInfo = "https://testnet.bscscan.com/tx/"+event.transactionHash;
+          }
+          if(CURRENT_NETWORK === 'BSC'){
+            file.blockInfo = "https://bscscan.com/tx/"+event.transactionHash;
+          }
+          if(CURRENT_NETWORK === 'Rinkeby'){
+            file.blockInfo = "https://rinkeby.etherscan.io/tx/"+event.transactionHash;
+          }
+          if(CURRENT_NETWORK === 'Mainnet'){
+            file.blockInfo = "https://etherscan.io/tx/"+event.transactionHash;
+          }
+          
+          file.validFrom = resp.validFrom;
+          file.timestamp = resp.timestamp;
+          file.owner = owner["1"];
+          file.ownerAddress = owner["0"];
+          file.name = resp.name;
+          file.ipfsFile = "https://ipfs.io/ipfs/"+file.fileHash;
+          allFiles.push(file);
         }
-        if(CURRENT_NETWORK === 'BSC'){
-          file.blockInfo = "https://bscscan.com/tx/"+event.transactionHash;
-        }
-        if(CURRENT_NETWORK === 'Rinkeby'){
-          file.blockInfo = "https://rinkeby.etherscan.io//tx/"+event.transactionHash;
-        }
-        if(CURRENT_NETWORK === 'Mainnet'){
-          file.blockInfo = "https://etherscan.io//tx/"+event.transactionHash;
-        }
-
-        file.ipfsFile = "https://ipfs.io/ipfs/"+file.fileHash;
-        allFiles.push(file);
       }
+      return allFiles;
     }
-    return allFiles;
+  }
+
+  const transferOwnership = async (address) => {
+    if(await isOwner() && state.account){
+      await state.contracts.signer.methods.transferOwner(address).send({from: state.account});
+    } 
   }
 
   useEffect(() => {
@@ -230,9 +305,12 @@ export const Web3Provider = ({ children }) => {
         getInformation,
         uploadFile,
         requestVerification,
-        doVerification,
-        undoVerification,
-        getAllFiles
+        verificate,
+        unverificate,
+        getAllFiles,
+        transferOwnership,
+        verifiedUser,
+        getVerifications
       }}
     >
       {children}

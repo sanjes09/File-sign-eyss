@@ -1,20 +1,16 @@
 import React, {useEffect} from "react";
 import { Link } from 'react-router-dom';
 import { Row, Col } from "react-bootstrap";
+import moment from 'moment';
 
 // COMPONENTS
 import Header from "../../components/Header";
-import Footer from "../../components/Footer";
 import DashboardLogic from './DashboardLogic';
 
 const Dashboard = () => {
   const {
-    getData,
-    doSearch,
-    search,
-    myNFTs,
-    // filters,
-    // account
+    files,
+    getData
   } = DashboardLogic();
 
   useEffect(() => {
@@ -24,35 +20,39 @@ const Dashboard = () => {
   
   return (
     <div className="container-app">
-      <Header dashboard={true} doSearch={doSearch} search={search}/>
-      <Row className="m-0 p-0 main-section">
-        {/* <Sidebar dashboard={true} filters={filters}/> */}
-        <Row className='dashboard-items-container'>
-          {myNFTs.map((element, key) => (
-            <Link to={`/item/${element.id}`} className="dashboard-item-card" key={key} style={{textDecoration: 'none'}}>
-              <div className='dashboard-item-card-picture'>
-                <img src={element.data.image} alt="" style={{width: '100%', height: '100%', borderTopLeftRadius: '10px', borderTopRightRadius: '10px', objectFit: 'cover'}}/>
+      <Header/>
+      <Row className="main-container">
+        <Col sm={8} className="mx-auto">
+          <div id="accordion">
+            {files?.map((element, index)=>(
+              <div className="card" key={index}>
+                <div className="card-header super-center" id={`heading${index}`} style={{justifyContent: 'space-between'}}>
+                  <span className="mb-0">
+                    <button className="btn btn-link" data-toggle="collapse" data-target={`#collapse${index}`}  aria-expanded="false" aria-controls={`collapse${index}`}>
+                      {element.name}
+                    </button>
+                  </span>
+                  <span className="mb-0">
+                    {moment(element.validFrom*1000).format('DD/MM/YY')} - {moment(element.validTo*1000).format('DD/MM/YY')}
+                  </span>
+                </div>
+
+                <div id={`collapse${index}`} className="collapse " aria-labelledby={`heading${index}`} data-parent="#accordion">
+                  <div className="card-body font-weight-bold">
+                    <p>Empresa: {element.owner} - {element.ownerAddress}</p>
+                    <p>Promocion: {element.name}</p>
+                    <p>Validez: {moment(element.validFrom*1000).format('DD/MM/YY')} - {moment(element.validTo*1000).format('DD/MM/YY')}</p>
+                    <p>Hash documento: {element.fileHash}</p>
+                    <p>Fecha almacenado: {moment(element.timestamp*1000).format('DD/MM/YY')}</p>
+                    <p><a href={element.blockInfo}>Enlace Explorador Bloques</a></p>
+                    <p><a href={element.ipfsFile}>Enlace archivo IPFS</a></p>
+                  </div>
+                </div>
               </div>
-              <Row className='dashboard-item-card-body m-0'>
-                <p className="p-0 m-0" style={{color: '#212529', fontWeight: 'bold', fontSize: '0.8rem', width: '100%', height: '20%'}}>Owner</p>
-                <p className="p-0 m-0" style={{color: '#212529', fontSize: '1rem', width: '100%', height: '20%'}}>{element.data.name}</p>
-                <p className="p-0 m-0" style={{fontSize: '0.8rem', color: '#777', width: '100%', height: '40%'}}>{element.data.description}</p>
-                <Col sm={12} className="m-0 p-0 mt-auto">
-                  <Row className="m-0 p-0">
-                    <Col sm={6} className="m-0 p-0 text-left">
-                      <p className="p-0 m-0" style={{color: '#212529', fontSize:'0.8rem'}}>Amount: {element.amount}</p>
-                    </Col>
-                    <Col sm={6} className="m-0 p-0 text-right">
-                      {/* <p className="p-0 m-0" style={{fontSize:'0.8rem'}}>ETH</p> */}
-                    </Col>
-                  </Row>
-                </Col>
-              </Row>
-            </Link>
-          ))}
-        </Row>
+            ))}
+          </div>
+        </Col>
       </Row>
-      <Footer/>
     </div>
   );
 }
